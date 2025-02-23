@@ -16,6 +16,10 @@
       {
         "command": "autoquery.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "autoquery.myAlert",
+        "title": "XD WTF"
       }
     ]
   },
