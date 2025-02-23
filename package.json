@@ -9,17 +9,26 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand: autoquery.query"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "autoquery.helloWorld",
-        "title": "Hello World"
+        "command": "autoquery.welcomeMessage",
+        "title": "Welcome"
       },
       {
-        "command": "autoquery.myAlert",
-        "title": "XD WTF"
+        "command": "autoquery.runQuery",
+        "title": "Query Element"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "autoquery.runQuery",
+        "key": "ctrl+shift+q",
+        "mac": "cmd+q"
       }
     ]
   },
