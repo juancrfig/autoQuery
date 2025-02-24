@@ -22,7 +22,15 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage('No active editor found!');
 			return;
 		}
-		vscode.window.showInformationMessage('An active editor has been detected!');
+		
+		const selection = editor.selection;
+		if (selection.isEmpty) {
+			vscode.window.showErrorMessage('Select some HTML first!');
+			return;
+		}
+		const selectedText = editor.document.getText(selection);
+
+		vscode.window.showInformationMessage(`You selected: ${selectedText}`);
 	});
 
 	context.subscriptions.push(welcomeMessage);
