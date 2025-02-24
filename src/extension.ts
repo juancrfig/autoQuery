@@ -31,6 +31,8 @@ export function activate(context: vscode.ExtensionContext) {
 		const selectedText = editor.document.getText(selection);
 
 		vscode.window.showInformationMessage(`You selected: ${selectedText}`);
+
+		const variableName = promptVariableName();
 	});
 
 	context.subscriptions.push(welcomeMessage);
@@ -38,6 +40,23 @@ export function activate(context: vscode.ExtensionContext) {
 
 
 }
+
+// HELPER FUNCTIONS
+
+async function promptVariableName() {
+	const variableName = await vscode.window.showInputBox({
+		prompt: 'Name for the variable',
+		placeHolder: 'myElement'
+	});
+
+	vscode.window.showInformationMessage(
+		`You typed ${variableName}`
+	);
+	
+	return variableName;
+}
+
+
 
 // This method is called when your extension is deactivated
 export function deactivate() {}
