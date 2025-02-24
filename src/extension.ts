@@ -1,115 +1,154 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const welcomeMessage = vscode.commands.registerCommand('autoquery.welcomeMessage', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Welcome to autoQuery!');
-	});
-
-	const queryCommand = vscode.commands.registerCommand('autoquery.runQuery', async () => {
-		
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) {
-			vscode.window.showErrorMessage('No active editor found!');
-			return;
-		}
-		
-		const selection = editor.selection;
-		if (selection.isEmpty) {
-			vscode.window.showErrorMessage('Select some HTML first!');
-			return;
-		}
-		const selectedText = editor.document.getText(selection);
-
-		vscode.window.showInformationMessage(`You selected: ${selectedText}`);
-
-		// Generate the querySelector selector
-		const selector = await generateQuerySelector(selectedText);
-		if (!selector) {
-			vscode.window.showErrorMessage('No ID or class found. Please add one to your HTML!');
-			return;
-		}
-
-		const variableName = await promptVariableName();
-
-
-		// Create the JavaScript variable
-		const jsVariable = `const ${variableName} = document.querySelector('${selector}');`;
-		// Show it for now (we’ll insert it in Step 5)
-		vscode.window.showInformationMessage(`Generated: ${jsVariable}`);
-
-
-
-
-
-
-	});
-
-	context.subscriptions.push(welcomeMessage);
-	context.subscriptions.push(queryCommand);
-
-
-}
-
-// HELPER FUNCTIONS
-
-async function promptVariableName() {
-	const variableName = await vscode.window.showInputBox({
-		prompt: 'Name for the variable',
-		placeHolder: 'myElement',
-		validateInput: (value) => {
-			if (!value || value.trim() === '') {
-				return 'Variable name cannot be empty!';
-			}
-			if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(value)) {
-				return 'Invalid variable name! Use letters, numbers, _, or $ (no spaces).';
-			}
-			return null; // No error
-		}
-	});
-
-	// If the user cancels (undefined) or doesn’t enter a name, exit
-	if (!variableName) {
-		vscode.window.showInformationMessage('Variable creation cancelled.');
-		return;
-	}
-
-
-	vscode.window.showInformationMessage(
-		`You typed ${variableName}`
-	);
-
-	return variableName;
-}
-
-// Helper function to generate the selector (no variable name here)
+// Helper function to generate the selector
 function generateQuerySelector(html: string): string | null {
-    // Simple regex to find id or class
     const idMatch = html.match(/id=["']([^"']+)["']/);
     if (idMatch) {
-        const id = idMatch[1]; // e.g., "myDiv"
-        return `#${id}`; // e.g., "#myDiv"
+        const id = idMatch[1];
+        return `#${id}`;
     }
 
     const classMatch = html.match(/class=["']([^"']+)["']/);
     if (classMatch) {
-        const className = classMatch[1].split(' ')[0]; // Take the first class if multiple
-        return `.${className}`; // e.g., ".container"
+        const className = classMatch[1].split(' ')[0];
+        return `.${className}`;
     }
 
-    return null; // No ID or class found
+    return null;
 }
 
+// Helper to get open JS/TS files
+function getJsTsFiles(): vscode.TextDocument[] {
+    return vscode.workspace.textDocuments.filter(doc =>
+        doc.languageId.match(/javascript|typescript/)
+    );
+}
 
+// Helper to get JS/TS files in the workspace
+async function getWorkspaceJsTsFiles(): Promise<vscode.Uri[]> {
+    return await vscode.workspace.findFiles('**/*.{js,ts}', '**/node_modules/**');
+}
 
-// This method is called when your extension is deactivated
+// Custom QuickPickItem interface with uri
+interface FileQuickPickItem extends vscode.QuickPickItem {
+    uri: vscode.Uri;
+}
+
+export function activate(context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+        vscode.commands.registerCommand('autoquery.runQuery', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showErrorMessage('No active editor found!');
+                return;
+            }
+
+            const selection = editor.selection;
+            const selectedText = editor.document.getText(selection);
+
+            if (selection.isEmpty) {
+                vscode.window.showErrorMessage('Please select some HTML first!');
+                return;
+            }
+
+            const selector = generateQuerySelector(selectedText);
+            if (!selector) {
+                vscode.window.showErrorMessage('No ID or class found. Please add one to your HTML!');
+                return;
+            }
+
+            const variableName = await vscode.window.showInputBox({
+                prompt: 'Enter the variable name for your querySelector',
+                placeHolder: 'e.g., myElement',
+                validateInput: (value) => {
+                    if (!value || value.trim() === '') {
+                        return 'Variable name cannot be empty!';
+                    }
+                    if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(value)) {
+                        return 'Invalid variable name! Use letters, numbers, _, or $ (no spaces).';
+                    }
+                    return null;
+                }
+            });
+
+            if (!variableName) {
+                vscode.window.showInformationMessage('Variable creation cancelled.');
+                return;
+            }
+
+            const jsVariable = `const ${variableName} = document.querySelector('${selector}');\n`;
+
+            const jsTsFiles = getJsTsFiles();
+            let targetDocument: vscode.TextDocument | undefined;
+
+            if (jsTsFiles.length === 1) {
+                targetDocument = jsTsFiles[0];
+            } else {
+                const workspaceFiles = await getWorkspaceJsTsFiles();
+                if (workspaceFiles.length === 0) {
+                    vscode.window.showErrorMessage('No JavaScript/TypeScript files found in the workspace!');
+                    return;
+                }
+
+                const baseUri = editor.document.uri.fsPath.split('/').slice(0, -1).join('/') || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+                const fileItems: FileQuickPickItem[] = workspaceFiles.map(file => ({
+                    label: baseUri ? vscode.workspace.asRelativePath(file.fsPath, false) : file.fsPath,
+                    description: file.fsPath,
+                    uri: file
+                }));
+
+                const quickPick = vscode.window.createQuickPick<FileQuickPickItem>();
+                quickPick.placeholder = 'Type a relative or absolute path to a JS/TS file';
+                quickPick.items = fileItems;
+                quickPick.matchOnDescription = true;
+
+                quickPick.onDidChangeValue((value) => {
+                    if (value) {
+                        quickPick.items = fileItems.filter(item =>
+                            item.label.toLowerCase().includes(value.toLowerCase()) ||
+                            (item.description?.toLowerCase() || '').includes(value.toLowerCase())
+                        );
+                    } else {
+                        quickPick.items = fileItems;
+                    }
+                });
+
+                const selectedItem = await new Promise<FileQuickPickItem | undefined>(resolve => {
+                    quickPick.onDidAccept(() => {
+                        resolve(quickPick.selectedItems[0]);
+                        quickPick.hide();
+                    });
+                    quickPick.onDidHide(() => resolve(undefined));
+                    quickPick.show();
+                });
+
+                if (!selectedItem) {
+                    vscode.window.showInformationMessage('No file selected. Variable creation cancelled.');
+                    return;
+                }
+
+                targetDocument = await vscode.workspace.openTextDocument(selectedItem.uri);
+            }
+
+            if (!targetDocument) {
+                vscode.window.showErrorMessage('Could not find a suitable file to insert the variable!');
+                return;
+            }
+
+            const targetEditor = await vscode.window.showTextDocument(targetDocument);
+            await targetEditor.edit(editBuilder => {
+                editBuilder.insert(new vscode.Position(0, 0), jsVariable);
+            });
+
+            // Switch back to the original editor to keep the user there
+            if (editor.document !== targetDocument) {
+                await vscode.window.showTextDocument(editor.document);
+            }
+
+            vscode.window.showInformationMessage(`Added: ${jsVariable.trim()} to ${vscode.workspace.asRelativePath(targetDocument.uri)}`);
+        })
+    );
+}
+
 export function deactivate() {}
