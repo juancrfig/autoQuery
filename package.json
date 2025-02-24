@@ -1,8 +1,9 @@
 {
   "name": "autoquery",
+  "publisher": "JuanFigueroa",
   "displayName": "autoQuery",
   "description": "Automatically generate JavaScript querySelector variables for HTML elements in your project. Stop typing selectors manually!",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.97.0"
   },
