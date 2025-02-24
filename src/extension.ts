@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('Welcome to autoQuery!');
 	});
 
-	const queryCommand = vscode.commands.registerCommand('autoquery.runQuery', () => {
+	const queryCommand = vscode.commands.registerCommand('autoquery.runQuery', async () => {
 		
 		const editor = vscode.window.activeTextEditor;
 		if (!editor) {
@@ -32,7 +32,26 @@ export function activate(context: vscode.ExtensionContext) {
 
 		vscode.window.showInformationMessage(`You selected: ${selectedText}`);
 
-		const variableName = promptVariableName();
+		// Generate the querySelector selector
+		const selector = await generateQuerySelector(selectedText);
+		if (!selector) {
+			vscode.window.showErrorMessage('No ID or class found. Please add one to your HTML!');
+			return;
+		}
+
+		const variableName = await promptVariableName();
+
+
+		// Create the JavaScript variable
+		const jsVariable = `const ${variableName} = document.querySelector('${selector}');`;
+		// Show it for now (we’ll insert it in Step 5)
+		vscode.window.showInformationMessage(`Generated: ${jsVariable}`);
+
+
+
+
+
+
 	});
 
 	context.subscriptions.push(welcomeMessage);
@@ -46,14 +65,48 @@ export function activate(context: vscode.ExtensionContext) {
 async function promptVariableName() {
 	const variableName = await vscode.window.showInputBox({
 		prompt: 'Name for the variable',
-		placeHolder: 'myElement'
+		placeHolder: 'myElement',
+		validateInput: (value) => {
+			if (!value || value.trim() === '') {
+				return 'Variable name cannot be empty!';
+			}
+			if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(value)) {
+				return 'Invalid variable name! Use letters, numbers, _, or $ (no spaces).';
+			}
+			return null; // No error
+		}
 	});
+
+	// If the user cancels (undefined) or doesn’t enter a name, exit
+	if (!variableName) {
+		vscode.window.showInformationMessage('Variable creation cancelled.');
+		return;
+	}
+
 
 	vscode.window.showInformationMessage(
 		`You typed ${variableName}`
 	);
-	
+
 	return variableName;
+}
+
+// Helper function to generate the selector (no variable name here)
+function generateQuerySelector(html: string): string | null {
+    // Simple regex to find id or class
+    const idMatch = html.match(/id=["']([^"']+)["']/);
+    if (idMatch) {
+        const id = idMatch[1]; // e.g., "myDiv"
+        return `#${id}`; // e.g., "#myDiv"
+    }
+
+    const classMatch = html.match(/class=["']([^"']+)["']/);
+    if (classMatch) {
+        const className = classMatch[1].split(' ')[0]; // Take the first class if multiple
+        return `.${className}`; // e.g., ".container"
+    }
+
+    return null; // No ID or class found
 }
 
 
