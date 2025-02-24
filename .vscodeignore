@@ -2,7 +2,8 @@
 .vscode-test/**
 out/**
 node_modules/**
-src/**
+src/**/*.ts  # Exclude TypeScript files in src/
+!src/autoQueryLogo.jpg  # Include the icon
 .gitignore
 .yarnrc
 webpack.config.js

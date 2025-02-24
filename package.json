@@ -1,9 +1,14 @@
 {
   "name": "autoquery",
   "publisher": "JuanFigueroa",
+  "icon": "src/autoQueryLogo.jpg",
+  "repository": {
+      "type": "git",
+      "url": "https://github.com/juancrfig/autoQuery.git"
+    },
   "displayName": "autoQuery",
   "description": "Automatically generate JavaScript querySelector variables for HTML elements in your project. Stop typing selectors manually!",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.97.0"
   },
