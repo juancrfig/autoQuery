@@ -10,7 +10,7 @@
   "description": "Automatically generate JavaScript querySelector variables for HTML elements in your project. Stop typing selectors manually!",
   "version": "1.0.2",
   "engines": {
-    "vscode": "^1.86.2"
+    "vscode": "^1.80.0"
   },
   "categories": [
     "Other"
@@ -50,7 +50,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.97.0",
+    "@types/vscode": "^1.80.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
